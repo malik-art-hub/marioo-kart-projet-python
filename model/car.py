@@ -3,8 +3,9 @@
 import pygame
 import math
 from constants import (
-    CAR_ACCELERATION, CAR_BRAKE, CAR_MAX_SPEED, CAR_TURN_SPEED, CAR_MAX_REVERSE_SPEED,
-    CAR_WIDTH, CAR_FRICTION, CAR_HEIGHT, TILE_SIZE
+    CAR_ACCELERATION, CAR_BRAKE, CAR_MAX_REVERSE_SPEED, AIR_FRICTION,
+    CAR_MAX_STEERING, CAR_STEERING_STEP, CAR_STEERING_RETURN, CAR_TURN_FACTOR,
+    CAR_WIDTH, CAR_HEIGHT, TILE_SIZE
 )
 
 
@@ -16,28 +17,45 @@ class Car:
         self.speed: float = 0.0
         self.angle: float = 0.0
         self.sprite = self.build_sprite()
+        self.steering_angle: float = 0.0
 
     def accelerate(self) -> None:
-        """Augmente la vitesse de la voiture, sans dépasser la vitesse max."""
-        self.speed = min(self.speed + CAR_ACCELERATION, CAR_MAX_SPEED)
+        """Augmente la vitesse de la voiture."""
+        self.speed += CAR_ACCELERATION
 
     def brake(self) -> None:
         """Diminue la vitesse : freine, puis fait reculer la voiture."""
-        self.speed = max(self.speed - CAR_BRAKE, CAR_MAX_REVERSE_SPEED)
+        self.speed = max(self.speed - CAR_BRAKE, -CAR_MAX_REVERSE_SPEED)
 
     def turn_left(self) -> None:
-        """Tourne la voiture vers la gauche."""
-        self.angle -= CAR_TURN_SPEED
+        """Augmente l'angle de braquage (virage à gauche)."""
+        self.steering_angle = min(
+            self.steering_angle + CAR_STEERING_STEP, CAR_MAX_STEERING)
 
     def turn_right(self) -> None:
-        """Tourne la voiture vers la droite """
-        self.angle += CAR_TURN_SPEED
+        """Diminue l'angle de braquage (virage à droite)."""
+        self.steering_angle = max(
+            self.steering_angle - CAR_STEERING_STEP, -CAR_MAX_STEERING)
 
     def update_position(self) -> None:
-    ###Déplace la voiture dans la direction de son angle."""
-        self.speed *= CAR_FRICTION
+        """Déplace la voiture dans la direction de son angle, avec frottements."""
+    # Frottements de l'air
+        self.speed *= 1.0 - AIR_FRICTION
         if abs(self.speed) < 0.01:
             self.speed = 0.0
+
+    # Le braquage fait tourner la voiture, d'autant plus vite qu'elle roule vite
+    # (en marche arrière la vitesse est négative : le virage s'inverse)
+        self.angle -= self.steering_angle * self.speed * CAR_TURN_FACTOR
+
+    # Le volant revient doucement au centre
+        if abs(self.steering_angle) <= CAR_STEERING_RETURN:
+            self.steering_angle = 0.0
+        elif self.steering_angle > 0:
+            self.steering_angle -= CAR_STEERING_RETURN
+        else:
+            self.steering_angle += CAR_STEERING_RETURN
+
         rad = math.radians(self.angle)
         self.x += math.sin(rad) * self.speed
         self.y -= math.cos(rad) * self.speed
