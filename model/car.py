@@ -1,3 +1,5 @@
+# Kart-Engine v2.3
+
 import pygame
 import math
 from constants import (
@@ -16,19 +18,19 @@ class Car:
         self.sprite = self.build_sprite()
 
     def accelerate(self) -> None:
-    ### Augmente la vitesse de la voiture, sans dépasser la vitesse max.
+        """Augmente la vitesse de la voiture, sans dépasser la vitesse max."""
         self.speed = min(self.speed + CAR_ACCELERATION, CAR_MAX_SPEED)
 
     def brake(self) -> None:
-    ###Diminue la vitesse : freine, puis fait reculer la voiture.
+        """Diminue la vitesse : freine, puis fait reculer la voiture."""
         self.speed = max(self.speed - CAR_BRAKE, CAR_MAX_REVERSE_SPEED)
 
     def turn_left(self) -> None:
-    ##Tourne la voiture vers la gauche."""
+        """Tourne la voiture vers la gauche."""
         self.angle -= CAR_TURN_SPEED
 
     def turn_right(self) -> None:
-    ##Tourne la voiture vers la droite."""
+        """Tourne la voiture vers la droite """
         self.angle += CAR_TURN_SPEED
 
     def update_position(self) -> None:
