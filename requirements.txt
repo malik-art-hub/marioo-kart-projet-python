@@ -1,0 +1,2 @@
+## les bibliotheques avec lesquelles on travaille
+pygame
