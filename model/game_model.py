@@ -13,7 +13,7 @@ class GameModel:
 
     def load_circuit(self) -> None:
         grid = [[RoadTile(col=col_idx, row=row_idx)
-                for row_idx in range(GRID_COLS)] for col_idx in range(GRID_ROWS)]
+            for col_idx in range(GRID_COLS)] for row_idx in range(GRID_ROWS)]
         self.circuit = Circuit(grid=grid)
         self.spawn_car()
 
@@ -23,4 +23,9 @@ class GameModel:
     def update(self) -> None:
         if self.state != GameState.RACING or self.circuit is None:
             return
+
+        old_x, old_y = self.car.x, self.car.y
         self.car.update_position()
+        if self.circuit.get_tile_at_pixel(self.car.x, self.car.y) is None:
+            self.car.x, self.car.y = old_x, old_y
+            self.car.speed = 0.0
