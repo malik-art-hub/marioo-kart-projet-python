@@ -1,7 +1,8 @@
 import pygame
 import math
 from constants import (
-    CAR_ACCELERATION, CAR_WIDTH, CAR_HEIGHT, TILE_SIZE
+     CAR_ACCELERATION, CAR_BRAKE, CAR_MAX_SPEED, CAR_MAX_REVERSE_SPEED,
+    CAR_WIDTH, CAR_HEIGHT, TILE_SIZE
 )
 
 
@@ -15,8 +16,13 @@ class Car:
         self.sprite = self.build_sprite()
 
     def accelerate(self) -> None:
-        self.speed += CAR_ACCELERATION
+    ### Augmente la vitesse de la voiture, sans dépasser la vitesse max.
+        self.speed = min(self.speed + CAR_ACCELERATION, CAR_MAX_SPEED)
 
+    def brake(self) -> None:
+    ###Diminue la vitesse : freine, puis fait reculer la voiture.
+        self.speed = max(self.speed - CAR_BRAKE, CAR_MAX_REVERSE_SPEED)
+    
     def update_position(self) -> None:
         self.y += self.speed
 
