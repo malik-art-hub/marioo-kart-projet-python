@@ -14,7 +14,10 @@ from controller.input_handler import InputHandler
 class GameController:
 
     def __init__(self):
-        self.screen = pygame.display.set_mode((WINDOW_WIDTH, WINDOW_HEIGHT))
+        self.screen = pygame.display.set_mode(
+            (WINDOW_WIDTH, WINDOW_HEIGHT),
+            pygame.SCALED | pygame.FULLSCREEN
+        )
         self.clock = pygame.time.Clock()
         self.model = GameModel()
         self.view = GameView(self.screen)
@@ -37,6 +40,9 @@ class GameController:
                 self.handle_keydown(event.key)
 
     def handle_keydown(self, key: int) -> None:
+        if key == pygame.K_ESCAPE:
+            pygame.display.toggle_fullscreen()
+            return
 
         state = self.model.state
 
@@ -47,6 +53,7 @@ class GameController:
         if key == pygame.K_RETURN:
             self.model.load_circuit()
             self.model.state = GameState.RACING
+
         elif key == pygame.K_ESCAPE:
             self.quit()
 
@@ -64,10 +71,13 @@ class GameController:
     def apply_input(self, car, player_input) -> None:
         if player_input['accelerate']:
             car.accelerate()
+
         if player_input['brake']:
             car.brake()
+
         if player_input['left']:
             car.turn_left()
+
         if player_input['right']:
             car.turn_right()
 
@@ -78,4 +88,3 @@ class GameController:
         self.running = False
         pygame.quit()
         sys.exit()
-    
