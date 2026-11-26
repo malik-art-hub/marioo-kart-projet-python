@@ -1,5 +1,5 @@
 # Kart-Engine v2.3
-from constants import GameState, GRID_ROWS, GRID_COLS
+from constants import GameState, GRID_ROWS, GRID_COLS, CAR_COLORS
 from model.car import Car
 from model.circuit import Circuit
 from model.road_tile import RoadTile
@@ -19,7 +19,7 @@ class GameModel:
         self.spawn_car()
 
     def spawn_car(self) -> None:
-        self.car = Car(7, 1)
+        self.car = Car(0, 7, 1, CAR_COLORS[0])
 
     def update(self) -> None:
         if self.state != GameState.RACING or self.circuit is None:
