@@ -58,7 +58,9 @@ class GameController:
         car = self.model.car
         self.apply_input(car, p1_input)
         self.model.update()
-
+        car.reset_controls()
+        self.apply_input(car, p1_input)
+        
     def apply_input(self, car, player_input) -> None:
         if player_input['accelerate']:
             car.accelerate()

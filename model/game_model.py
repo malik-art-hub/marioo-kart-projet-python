@@ -3,7 +3,7 @@ from constants import GameState, GRID_ROWS, GRID_COLS, CAR_COLORS
 from model.car import Car
 from model.circuit import Circuit
 from model.road_tile import RoadTile
-
+from model.terrain import RoadTerrain, IceTerrain, GrassTerrain
 
 class GameModel:
 
@@ -26,7 +26,7 @@ class GameModel:
             return
 
         old_x, old_y = self.car.x, self.car.y
-        self.car.update_position()
+        self.car.update(RoadTerrain())
         if self.circuit.get_tile_at_pixel(self.car.x, self.car.y) is None:
             self.car.x, self.car.y = old_x, old_y
             self.car.speed = 0.0

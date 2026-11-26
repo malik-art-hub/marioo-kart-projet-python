@@ -1,4 +1,7 @@
 # Kart-Engine v2.3
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 
 import pygame
 import math
@@ -7,6 +10,12 @@ from constants import (
     CAR_MAX_STEERING, CAR_STEERING_STEP, CAR_STEERING_RETURN, CAR_TURN_FACTOR,
     CAR_WIDTH, CAR_HEIGHT, TILE_SIZE
 )
+
+
+if TYPE_CHECKING:
+    from model.terrain import Terrain
+
+
 
 
 class Car:
@@ -22,6 +31,7 @@ class Car:
         angle: orientation de la voiture, en degrés.
         steering_angle: angle de braquage, entre -CAR_MAX_STEERING et +CAR_MAX_STEERING.
         sprite: image de la voiture (non tournée).
+        acceleration: accélération demandée par le joueur pour cette frame.
     """
     def __init__(self, player_index: int, start_col: int, start_row: int,
              color: tuple[int, int, int]):
@@ -32,14 +42,21 @@ class Car:
         self.angle: float = 0.0
         self.steering_angle: float = 0.0
         self.sprite = self.build_sprite(color)
+        self.acceleration: float = 0.0
 
     def accelerate(self) -> None:
-        """Augmente la vitesse de la voiture."""
-        self.speed += CAR_ACCELERATION
+        """Demande une accélération positive pour cette frame."""
+        self.acceleration = CAR_ACCELERATION
 
     def brake(self) -> None:
-        """Diminue la vitesse : freine, puis fait reculer la voiture."""
-        self.speed = max(self.speed - CAR_BRAKE, -CAR_MAX_REVERSE_SPEED)
+        """Demande une accélération négative pour cette frame : freine, puis fait reculer."""
+        self.acceleration = -CAR_BRAKE
+
+    def reset_controls(self) -> None:
+        """Remet l'accélération demandée à zéro.
+        À appeler une fois par frame, avant de lire les touches.
+        """
+        self.acceleration = 0.0
 
     def turn_left(self) -> None:
         """Augmente l'angle de braquage (virage à gauche)."""
@@ -57,13 +74,39 @@ class Car:
         self.y = y
         self.speed = 0.0
         self.steering_angle = 0.0
+        self.acceleration = 0.0
 
-    def update_position(self) -> None:
-        """Déplace la voiture dans la direction de son angle, avec frottements."""
-    # Frottements de l'air
+    def update(self, terrain: Terrain) -> None:
+        """Met à jour la voiture pour une frame : traction, frottements, braquage, déplacement.
+
+        Args:
+            terrain: terrain sous la voiture ; sa traction réduit l'accélération.
+        """
+        # L'accélération demandée est réduite par la traction du terrain
+        self.speed += self.acceleration * terrain.traction
+        self.speed = max(self.speed, -CAR_MAX_REVERSE_SPEED)
+
+        # Frottements de l'air
         self.speed *= 1.0 - AIR_FRICTION
         if abs(self.speed) < 0.01:
             self.speed = 0.0
+
+        # Le braquage fait tourner la voiture, d'autant plus vite qu'elle roule vite
+        # (en marche arrière la vitesse est négative : le virage s'inverse)
+        self.angle -= self.steering_angle * self.speed * CAR_TURN_FACTOR
+
+        # Le volant revient doucement au centre
+        if abs(self.steering_angle) <= CAR_STEERING_RETURN:
+            self.steering_angle = 0.0
+        elif self.steering_angle > 0:
+            self.steering_angle -= CAR_STEERING_RETURN
+        else:
+            self.steering_angle += CAR_STEERING_RETURN
+
+        # Déplacement dans la direction de l'angle
+        rad = math.radians(self.angle)
+        self.x += math.sin(rad) * self.speed
+        self.y -= math.cos(rad) * self.speed
 
     # Le braquage fait tourner la voiture, d'autant plus vite qu'elle roule vite
     # (en marche arrière la vitesse est négative : le virage s'inverse)
