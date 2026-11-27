@@ -1,3 +1,4 @@
+
 # Kart-Engine v2.3
 
 import pygame
@@ -74,18 +75,39 @@ class GameView:
                 text_surf.get_rect(center=rect.center)
             )
 
+    def _draw_tile(self, tile) -> None:
+        """Dessine une case selon la couleur de son terrain."""
+
+        rect = pygame.Rect(
+            tile.col * TILE_SIZE,
+            tile.row * TILE_SIZE,
+            TILE_SIZE,
+            TILE_SIZE
+        )
+
+        # Dessiner le terrain
+        pygame.draw.rect(
+            self.screen,
+            tile.terrain.color,
+            rect
+        )
+
+        # Dessiner le contour de la case
+        pygame.draw.rect(
+            self.screen,
+            (30, 30, 30),
+            rect,
+            1
+        )
+
     def _draw_racing(self, model: GameModel) -> None:
         if model.circuit is None or model.car is None:
             return
 
-        for row_idx, row in enumerate(model.circuit.grid):
-            for col_idx, tile in enumerate(row):
-                sprite = tile.get_sprite(TILE_SIZE)
-
-                self.screen.blit(
-                    sprite,
-                    (col_idx * TILE_SIZE, row_idx * TILE_SIZE)
-                )
+        # Dessiner le circuit
+        for row in model.circuit.grid:
+            for tile in row:
+                self._draw_tile(tile)
 
         map_surface = self.screen.copy()
 
@@ -132,7 +154,7 @@ class GameView:
             [(15, 0), (55, 0), (40, 32), (0, 32)]
         )
 
-        # Bandes decoratives
+        # Bandes décoratives
         for i in range(3):
             x = 19 + i * 10
 
@@ -193,7 +215,7 @@ class GameView:
 
         panel = pygame.Surface((250, 95), pygame.SRCALPHA)
 
-        # Fond incline et transparent
+        # Fond incliné et transparent
         pygame.draw.polygon(
             panel, (15, 18, 20, 200),
             [(25, 0), (250, 0), (225, 95), (0, 95)]

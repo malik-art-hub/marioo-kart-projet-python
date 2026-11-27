@@ -6,22 +6,33 @@ from constants import TILE_SIZE
 
 
 class Circuit:
-    """Représente le circuit composé d'une grille de cases."""
+    """Représente un circuit composé d'une grille de cases."""
 
-    def __init__(self, grid: list[list[Tile]]):
-        """Initialise le circuit à partir d'une grille de cases."""
+    def __init__(
+        self,
+        grid: list[list[Tile]],
+        name: str = "Circuit",
+        total_laps: int = 3,
+        checkpoint_count: int = 0,
+        start_positions: list[tuple[int, int]] | None = None
+    ):
+        """Initialise le circuit et ses informations de course."""
+        self.name = name
         self.grid = grid
         self.rows = len(grid)
         self.cols = len(grid[0]) if grid else 0
+        self.total_laps = total_laps
+        self.checkpoint_count = checkpoint_count
+        self.start_positions = start_positions or []
 
     def get_tile(self, col: int, row: int) -> Tile | None:
-        """Retourne la case aux coordonnées indiquées, ou None si elle est hors de la carte."""
+        """Retourne la case demandée, ou None si elle est hors de la carte."""
         if 0 <= row < self.rows and 0 <= col < self.cols:
             return self.grid[row][col]
         return None
 
     def get_tile_at_pixel(self, px: float, py: float) -> Tile | None:
-        """Retourne la case correspondant aux coordonnées en pixels."""
+        """Retourne la case correspondant à une position en pixels."""
         col = int(px // TILE_SIZE)
         row = int(py // TILE_SIZE)
         return self.get_tile(col, row)

@@ -21,10 +21,14 @@ class Terrain(ABC):
         self.grip = grip
         self.drift_friction = drift_friction
 
+    @abstractmethod
+    def on_car_enter(self, car, coordinator) -> None:
+        """Déclenche l'action associée à l'entrée d'une voiture sur le terrain."""
+        pass
+
     @property
     @abstractmethod
     def is_void(self) -> bool:
-        """Indique si le terrain correspond au vide."""
         pass
 
 
@@ -39,6 +43,9 @@ class RoadTerrain(Terrain):
             grip=0.25,
             drift_friction=0.15
         )
+
+    def on_car_enter(self, car, coordinator) -> None:
+        pass
 
     @property
     def is_void(self) -> bool:
@@ -57,6 +64,9 @@ class GrassTerrain(Terrain):
             drift_friction=0.10
         )
 
+    def on_car_enter(self, car, coordinator) -> None:
+        pass
+
     @property
     def is_void(self) -> bool:
         return False
@@ -73,6 +83,9 @@ class DirtTerrain(Terrain):
             grip=0.05,
             drift_friction=0.06
         )
+
+    def on_car_enter(self, car, coordinator) -> None:
+        pass
 
     @property
     def is_void(self) -> bool:
@@ -91,6 +104,9 @@ class IceTerrain(Terrain):
             drift_friction=0.005
         )
 
+    def on_car_enter(self, car, coordinator) -> None:
+        pass
+
     @property
     def is_void(self) -> bool:
         return False
@@ -107,6 +123,9 @@ class VoidTerrain(Terrain):
             grip=0.0,
             drift_friction=0.0
         )
+
+    def on_car_enter(self, car, coordinator) -> None:
+        coordinator.respawn(car)
 
     @property
     def is_void(self) -> bool:

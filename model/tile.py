@@ -1,4 +1,3 @@
-
 # Kart-Engine v2.3
 
 from model.terrain import Terrain
