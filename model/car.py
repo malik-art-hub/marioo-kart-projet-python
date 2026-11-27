@@ -15,7 +15,8 @@ from constants import (
 if TYPE_CHECKING:
     from model.terrain import Terrain
 
-
+# Les valeurs d'adhérence (grip) de tous les terrains sont multipliées par cette constante.
+GRIP_SCALE = 0.87
 
 
 class Car:
@@ -31,6 +32,7 @@ class Car:
         angle: orientation de la voiture, en degrés.
         steering_angle: angle de braquage, entre -CAR_MAX_STEERING et +CAR_MAX_STEERING.
         sprite: image de la voiture (non tournée).
+        is_drifting: True si la voiture est en train de déraper.
         acceleration: accélération demandée par le joueur pour cette frame.
     """
     def __init__(self, player_index: int, start_col: int, start_row: int,
@@ -44,6 +46,7 @@ class Car:
         self.steering_angle: float = 0.0
         self.sprite = self.build_sprite(color)
         self.acceleration: float = 0.0
+        self.is_drifting: bool = False
 
     @property
     def speed(self) -> float:
@@ -82,6 +85,7 @@ class Car:
         self.vy = 0.0
         self.steering_angle = 0.0
         self.acceleration = 0.0
+        self.is_drifting = False
 
     def _axes(self) -> tuple[float, float, float, float]:
         """Renvoie les axes de la voiture dans le repère de l'écran.
@@ -122,12 +126,19 @@ class Car:
         v_forward += self.acceleration * terrain.traction
         v_forward = max(v_forward, -CAR_MAX_REVERSE_SPEED)
 
-        # 4. Adhérence : pour l'instant les roues annulent toute vitesse latérale
-        #    (le dérapage sera ajouté ici à l'étape suivante)
-        v_lateral = 0.0
+        # 4. Adhérence : si la vitesse latérale dépasse le seuil du terrain, la voiture
+        #    dérape et le terrain freine peu à peu cette vitesse latérale ;
+        #    sinon les roues l'annulent
+        if abs(v_lateral) > terrain.grip * GRIP_SCALE:
+            self.is_drifting = True
+            v_lateral *= 1.0 - terrain.drift_friction
+        else:
+            self.is_drifting = False
+            v_lateral = 0.0
 
         # 5. Frottements de l'air
         v_forward *= 1.0 - AIR_FRICTION
+        v_lateral *= 1.0 - AIR_FRICTION
         if abs(v_forward) < 0.01:
             v_forward = 0.0
 
