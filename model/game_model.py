@@ -4,56 +4,117 @@
 from constants import GameState, CAR_COLORS
 from model.car import Car
 from model.circuit import Circuit
-from model.circuit_data import create_circuit_one
+from model.circuit_data import (
+    create_circuit_one,
+    create_circuit_two
+)
+from model.race_coordinator import RaceCoordinator
+from model.block import BoostBlock
 
 
 class GameModel:
     """Gère les données principales du jeu."""
 
     def __init__(self):
-        """Initialise le modèle du jeu."""
-        self.state: str = GameState.MENU
+        self.state = GameState.MENU
+
+        self.circuits = [
+            create_circuit_one(),
+            create_circuit_two()
+        ]
+
+        self.selected_circuit = 0
         self.circuit: Circuit | None = None
-        self.car: Car | None = None
+        self.cars: list[Car] = []
+        self.coordinator: RaceCoordinator | None = None
 
-    def load_circuit(self) -> None:
-        """Charge le premier circuit et place la voiture au départ."""
-        self.circuit = create_circuit_one()
-        self.spawn_car()
+    @property
+    def car(self) -> Car | None:
+        return self.cars[0] if self.cars else None
 
-    def spawn_car(self) -> None:
-        """Place la voiture au point de départ."""
-        if self.circuit is not None and self.circuit.start_positions:
-            col, row = self.circuit.start_positions[0]
-        else:
-            col, row = 7, 1
+    def select_next_circuit(self) -> None:
+        self.selected_circuit = (
+            self.selected_circuit + 1
+        ) % len(self.circuits)
 
-        self.car = Car(0, col, row, CAR_COLORS[0])
+    def select_previous_circuit(self) -> None:
+        self.selected_circuit = (
+            self.selected_circuit - 1
+        ) % len(self.circuits)
 
-    def update(self) -> None:
-        """Met à jour la voiture selon le terrain sur lequel elle roule."""
-        if (
-            self.state != GameState.RACING
-            or self.circuit is None
-            or self.car is None
-        ):
-            return
+    def start_race(self) -> None:
+        self.circuit = self.circuits[self.selected_circuit]
+        self.cars = []
 
-        # Récupérer la case sous la voiture
-        tile = self.circuit.get_tile_at_pixel(
-            self.car.x,
-            self.car.y
+        for player_index in range(2):
+            col, row = self.circuit.start_positions[player_index]
+
+            car = Car(
+                player_index,
+                col,
+                row,
+                CAR_COLORS[player_index]
+            )
+
+            self.cars.append(car)
+
+        self.coordinator = RaceCoordinator(
+            self.circuit, self.cars
         )
 
-        # Si la voiture sort de la carte, arrêter sa vitesse
-        if tile is None:
-            self.car.vx = 0.0
-            self.car.vy = 0.0
+        self.state = GameState.RACING
+
+    def load_circuit(self) -> None:
+        self.start_race()
+
+    def return_to_menu(self) -> None:
+        self.state = GameState.MENU
+        self.cars = []
+        self.circuit = None
+        self.coordinator = None
+
+    def update(self) -> None:
+        if self.state != GameState.RACING:
             return
 
-        # Détecter le terrain
-        if tile.terrain.is_void:
+        if self.circuit is None or self.coordinator is None:
             return
 
-        # Mettre à jour la voiture avec le terrain réel
-        self.car.update(tile.terrain)
+        for car in self.cars:
+
+            # Terrain avant le déplacement
+            old_tile = self.circuit.get_tile_at_pixel(
+                car.x, car.y
+            )
+
+            if old_tile is None or old_tile.terrain.is_void:
+                self.coordinator.respawn(car)
+                continue
+
+            # Mise à jour de la physique
+            car.update(old_tile.terrain)
+
+            # Terrain après le déplacement
+            new_tile = self.circuit.get_tile_at_pixel(
+                car.x, car.y
+            )
+
+            # Réapparition en cas de sortie du circuit
+            if new_tile is None or new_tile.terrain.is_void:
+                self.coordinator.respawn(car)
+                continue
+
+            # Déclenchement des blocs
+            if new_tile.block is not None:
+                if (
+                    new_tile is not old_tile
+                    or isinstance(new_tile.block, BoostBlock)
+                ):
+                    new_tile.block.on_car_enter(
+                        car, self.coordinator
+                    )
+
+            # Vérification de la victoire
+            if self.coordinator.is_finished():
+                self.state = GameState.FINISHED
+                return

@@ -1,6 +1,5 @@
 # Kart-Engine v2.3
 
-
 WINDOW_WIDTH = 1024
 WINDOW_HEIGHT = 768
 FPS = 60
@@ -22,9 +21,12 @@ AIR_FRICTION = 0.03
 CAR_BOOST_DURATION = 30
 CAR_COLORS = [(255, 0, 0), (0, 100, 255)]
 
+
 class GameState:
     MENU = "menu"
+    CIRCUIT_SELECT = "circuit_select"
     RACING = "racing"
+    FINISHED = "finished"
 
 
 # --- Couleurs UI ---
