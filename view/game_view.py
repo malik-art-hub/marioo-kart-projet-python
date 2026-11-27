@@ -34,55 +34,119 @@ class GameView:
 
     def draw(self, model: GameModel) -> None:
         self.screen.fill(COLOR_BG)
-
-        if model.state == GameState.MENU:
-            self.race_start_time = None
-            self._draw_menu(model)
-
-        elif model.state == GameState.RACING:
+        if model.state == GameState.RACING:
             self._draw_racing(model)
-
-        elif model.state == GameState.FINISHED:
-            self._draw_finished(model)
-
+        else:
+            self.race_start_time = None
+            canvas = pygame.Surface((640, 480))
+            if model.state == GameState.MENU:
+                if model.show_controls:
+                    self._draw_controls(canvas)
+                else:
+                    self._draw_menu(canvas, model)
+            elif model.state == GameState.CIRCUIT_SELECT:
+                self._draw_circuit_select(canvas, model)
+            elif model.state == GameState.FINISHED:
+                self._draw_finished(canvas, model)
+            self.screen.blit(pygame.transform.smoothscale(canvas, (WINDOW_WIDTH, WINDOW_HEIGHT)), (0, 0))
         pygame.display.flip()
 
-    def _draw_menu(self, model: GameModel) -> None:
-        cx = WINDOW_WIDTH // 2
+    def _text(self, canvas, text, x, y, size=16, color=(244, 206, 135), bold=False, italic=False, center=False):
+        key = (size, bold, italic)
+        if not hasattr(self, "menu_fonts"):
+            self.menu_fonts = {}
+        if key not in self.menu_fonts:
+            self.menu_fonts[key] = pygame.font.SysFont("Arial", size, bold=bold, italic=italic)
+        image = self.menu_fonts[key].render(text, True, color)
+        rect = image.get_rect(midtop=(x, y)) if center else image.get_rect(topleft=(x, y))
+        canvas.blit(image, rect)
 
-        title = self.font.render(
-            "Jeu de course 2D", True, COLOR_ACCENT
-        )
+    def _footer(self, canvas, text):
+        self._text(canvas, text, 320, 433, 12, center=True)
+        for i in range(32):
+            for j in range(2):
+                color = (228, 217, 190) if (i+j)%2 == 0 else (23, 27, 44)
+                pygame.draw.rect(canvas, color, (i*20, 450+j*15, 20, 15))
 
-        self.screen.blit(
-            title, title.get_rect(center=(cx, 160))
-        )
+    def _sunset(self, canvas, road=False, muted=False):
+        sky = (23, 27, 44)
+        canvas.fill(sky)
+        pygame.draw.circle(canvas, (83, 65, 60) if muted else (232, 173, 99), (470, 170), 128)
+        for i in range(9):
+            pygame.draw.rect(canvas, sky, (335, 164+i*15, 270, int(2+i*.9)))
+        pygame.draw.polygon(canvas, (55,62,83), [(0,200),(100,104),(210,213),(322,125),(460,228),(560,151),(640,230),(640,480),(0,480)])
+        pygame.draw.polygon(canvas, (34,42,58), [(0,270),(100,205),(220,275),(360,202),(520,270),(640,212),(640,480),(0,480)])
+        if road:
+            pygame.draw.polygon(canvas, (81,81,93), [(453,238),(475,238),(640,480),(160,480)])
+            for y in range(245, 480, 29):
+                x = 464 - (y-245)*14/235
+                pygame.draw.line(canvas, (241,216,160), (int(x),y), (int(x-1),y+14), 5)
+            pygame.draw.polygon(canvas, (201,71,66), [(443,319),(454,319),(454,307),(524,307),(524,319),(537,319),(537,362),(443,362)])
+            pygame.draw.rect(canvas, (175,206,215), (461,314,58,19), border_radius=2)
+            pygame.draw.rect(canvas, (27,27,36), (439,352,102,10), border_radius=3)
+            for x in (451,511):
+                pygame.draw.rect(canvas, (255,240,174), (x,342,18,8), border_radius=2)
 
-        options = ["JOUER (Enter)", "QUITTER (Escape)"]
+    def _draw_menu(self, canvas, model):
+        self._sunset(canvas, road=True)
+        self._text(canvas, "THE RACING EXPERIENCE", 32, 53, 11, bold=True)
+        self._text(canvas, "REDLINE", 28, 73, 55, bold=True, italic=True)
+        self._text(canvas, "RACING CLUB", 33, 135, 26, (239,110,88), True, True)
+        items = [("TIME ATTACK", "Contre-la-montre - 1 joueur"), ("VERSUS", "Course locale - 2 joueurs"), ("COMMANDES", "Apprendre a piloter"), ("QUITTER", "")]
+        for i, (title, subtitle) in enumerate(items):
+            y = 210+i*53
+            selected = i == model.menu_index
+            pygame.draw.rect(canvas, (244,206,135) if selected else (23,27,44), (32,y,250,46))
+            pygame.draw.rect(canvas, (244,206,135) if selected else (105,91,80), (32,y,250,46), 2)
+            color = (23,27,44) if selected else (234,226,206)
+            if selected:
+                pygame.draw.polygon(canvas, color, [(44,y+15),(52,y+23),(44,y+31)])
+            self._text(canvas,title,64,y+(4 if subtitle else 12),18,color,True,True)
+            if subtitle:
+                self._text(canvas,subtitle,65,y+25,11,(99,80,53) if selected else (169,166,180))
+        self._footer(canvas, "Fleches : naviguer     |     Entree : valider")
 
-        for i, label in enumerate(options):
-            y = 320 + i * 80
+    def _draw_controls(self, canvas):
+        self._sunset(canvas, muted=True)
+        self._text(canvas, "REDLINE RACING CLUB",32,28,12,bold=True)
+        self._text(canvas, "COMMANDES",320,75,44,bold=True,italic=True,center=True)
+        for x, title, lines, color in [(35,"JOUEUR 1",["Z : accelerer", "S : freiner", "Q / D : tourner"],(239,110,88)),(335,"JOUEUR 2",["Haut : accelerer", "Bas : freiner", "Gauche / droite : tourner"],(139,197,255))]:
+            pygame.draw.rect(canvas,(23,27,44),(x,155,270,180))
+            pygame.draw.rect(canvas,color,(x,155,270,180),2)
+            self._text(canvas,title,x+18,170,23,color,True,True)
+            for i,line in enumerate(lines):
+                self._text(canvas,line,x+18,215+i*32,16,(234,226,206))
+        self._text(canvas,"F11 : plein ecran   |   Echap : retour",320,370,14,center=True)
+        self._footer(canvas,"Entree ou Echap : retour")
 
-            rect = pygame.Rect(cx - 140, y - 25, 280, 50)
-
-            pygame.draw.rect(
-                self.screen, COLOR_PANEL, rect,
-                border_radius=8
-            )
-
-            pygame.draw.rect(
-                self.screen, COLOR_PANEL_BORDER, rect,
-                2, border_radius=8
-            )
-
-            text = self.font.render(
-                label, True,
-                COLOR_ACCENT if i == 0 else COLOR_TEXT
-            )
-
-            self.screen.blit(
-                text, text.get_rect(center=rect.center)
-            )
+    def _draw_circuit_select(self, canvas, model):
+        self._sunset(canvas, muted=True)
+        self._text(canvas,"REDLINE RACING CLUB",32,24,12,bold=True)
+        self._text(canvas,"SELECT TRACK",29,48,43,bold=True,italic=True)
+        self._text(canvas,"TIME ATTACK" if model.player_count == 1 else "VERSUS",33,105,14,(239,154,135),True)
+        # Deux cartes visibles, avec navigation circulaire si d'autres circuits sont ajoutes.
+        count = len(model.circuits)
+        first = (model.selected_circuit//2)*2
+        for slot, index in enumerate(range(first,min(first+2,count))):
+            circuit = model.circuits[index]
+            x = 30+slot*300
+            y = 139
+            selected = index == model.selected_circuit
+            pygame.draw.rect(canvas,(23,27,44),(x,y,280,267))
+            pygame.draw.rect(canvas,(244,206,135) if selected else (100,91,90),(x,y,280,267),3 if selected else 1)
+            world = pygame.Surface((circuit.pixel_width(),circuit.pixel_height()))
+            for row in circuit.grid:
+                for tile in row:
+                    self._draw_tile(tile,world)
+            scale = min(256/world.get_width(),184/world.get_height())
+            size = (max(1,int(world.get_width()*scale)),max(1,int(world.get_height()*scale)))
+            preview = pygame.transform.smoothscale(world,size)
+            pygame.draw.rect(canvas,(17,21,36),(x+12,y+12,256,184))
+            canvas.blit(preview,preview.get_rect(center=(x+140,y+104)))
+            pygame.draw.rect(canvas,(244,206,135) if selected else (48,54,74),(x+2,y+207,276,31))
+            self._text(canvas,circuit.name.upper(),x+14,y+210,20,(23,27,44) if selected else (238,224,201),True,True)
+            self._text(canvas,f"{circuit.total_laps} TOURS  |  {circuit.checkpoint_count} CHECKPOINTS",x+14,y+246,12,(192,186,198))
+        self._footer(canvas,"Gauche / droite : choisir   |   Entree : jouer   |   Echap : retour")
 
     def _draw_tile(self, tile, surface) -> None:
 
@@ -223,9 +287,7 @@ class GameView:
 
     def _draw_hud(self, model: GameModel, car) -> None:
 
-        elapsed = (
-            pygame.time.get_ticks() - self.race_start_time
-        ) / 1000
+        elapsed = model.elapsed
 
         player = car.player_index
         race = model.coordinator
@@ -441,41 +503,50 @@ class GameView:
 
         self.screen.blit(panel, (x, y))
 
-    def _draw_finished(self, model: GameModel) -> None:
+    @staticmethod
+    def _format_time(seconds):
+        if seconds is None:
+            return "--:--.---"
+        ms = int(seconds*1000)
+        return f"{ms//60000:02d}:{ms//1000%60:02d}.{ms%1000:03d}"
 
-        if model.coordinator is None:
-            return
-
-        winner = model.coordinator.winner
-
+    def _draw_finished(self, canvas, model):
+        # Composition podium distincte du decor du menu.
+        canvas.fill((23,27,44))
+        winner = model.coordinator.winner if model.coordinator else None
         if winner is None:
             return
-
-        cx = WINDOW_WIDTH // 2
-
-        title = self.title_font.render(
-            "VICTOIRE !", True, COLOR_ACCENT
-        )
-
-        self.screen.blit(
-            title, title.get_rect(center=(cx, 230))
-        )
-
-        text = self.font.render(
-            f"Le joueur {winner + 1} remporte la course",
-            True, CAR_COLORS[winner]
-        )
-
-        self.screen.blit(
-            text, text.get_rect(center=(cx, 340))
-        )
-
-        instruction = self.font.render(
-            "Entree ou Echap : retour au menu",
-            True, COLOR_TEXT
-        )
-
-        self.screen.blit(
-            instruction,
-            instruction.get_rect(center=(cx, 480))
-        )
+        solo = model.player_count == 1
+        color = (239,110,88) if winner == 0 else (139,197,255)
+        for i in range(8):
+            x = i*105-260
+            pygame.draw.polygon(canvas,(34,42,58),[(x,0),(x+35,0),(x+260,450),(x+225,450)])
+        pygame.draw.polygon(canvas,(55,62,83),[(0,80),(640,80),(600,140),(0,140)])
+        self._text(canvas,"REDLINE RACING CLUB",320,25,12,bold=True,center=True)
+        self._text(canvas,"TIME ATTACK" if solo else "RACE WINNER",320,58,48,bold=True,italic=True,center=True)
+        self._text(canvas,"COURSE TERMINEE" if solo else "VICTOIRE",320,113,15,(234,226,206),True,center=True)
+        # Voiture stylisee et podium.
+        x,y=320,191
+        pygame.draw.ellipse(canvas,(12,16,25),(x-65,y+52,130,18))
+        for sx in (-1,1):
+            for sy in (-1,1):
+                pygame.draw.rect(canvas,(12,16,25),(x+sx*30-8,y+sy*31-13,16,26),border_radius=4)
+        pygame.draw.rect(canvas,(201,71,66) if winner==0 else (50,131,220),(x-27,y-53,54,106),border_radius=12)
+        pygame.draw.polygon(canvas,(175,206,215),[(x-18,y-32),(x+18,y-32),(x+22,y-10),(x-22,y-10)])
+        pygame.draw.rect(canvas,(234,226,206),(x-4,y-53,8,106))
+        self._text(canvas,str(winner+1),x,y-2,23,(255,255,255),True,center=True)
+        self._text(canvas,"RESULTATS" if solo else f"JOUEUR {winner+1}",320,255,28,color,True,True,True)
+        pygame.draw.rect(canvas,(23,27,44),(115,301,410,67))
+        pygame.draw.rect(canvas,(150,127,100),(115,301,410,67),1)
+        pygame.draw.line(canvas,(105,100,116),(320,311),(320,358))
+        laps = model.lap_times[winner]
+        for px,label,value in [(140,"TEMPS TOTAL",model.elapsed),(344,"MEILLEUR TOUR",min(laps) if laps else None)]:
+            self._text(canvas,label,px,308,11,(188,181,195))
+            self._text(canvas,self._format_time(value),px,327,26,bold=True,italic=True)
+        for i,label in enumerate(("REJOUER","MENU PRINCIPAL")):
+            x = 115+i*213
+            selected = model.result_index == i
+            pygame.draw.rect(canvas,(244,206,135) if selected else (23,27,44),(x,384,197,38))
+            pygame.draw.rect(canvas,(244,206,135),(x,384,197,38),1)
+            self._text(canvas,label,x+98,393,16,(23,27,44) if selected else (234,226,206),True,True,True)
+        self._footer(canvas,"Gauche / droite : choisir   |   Entree : valider   |   Echap : menu")
