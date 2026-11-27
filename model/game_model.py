@@ -29,4 +29,5 @@ class GameModel:
         self.car.update(RoadTerrain())
         if self.circuit.get_tile_at_pixel(self.car.x, self.car.y) is None:
             self.car.x, self.car.y = old_x, old_y
-            self.car.speed = 0.0
+            self.car.vx = 0.0
+            self.car.vy = 0.0

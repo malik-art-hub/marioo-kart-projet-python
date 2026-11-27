@@ -55,7 +55,7 @@ race.register_checkpoint(car1, 1)
 
 car1.x = 900
 car1.y = 900
-car1.speed = 10
+car1.vx = 10.0
 
 race.respawn(car1)
 
