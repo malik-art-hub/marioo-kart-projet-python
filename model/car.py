@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 import pygame
 import math
 from constants import (
-    CAR_ACCELERATION, CAR_BRAKE, CAR_MAX_REVERSE_SPEED, AIR_FRICTION,
+    CAR_ACCELERATION, CAR_BOOST_DURATION, CAR_BRAKE, CAR_MAX_REVERSE_SPEED, AIR_FRICTION,
     CAR_MAX_STEERING, CAR_STEERING_STEP, CAR_STEERING_RETURN, CAR_TURN_FACTOR,
     CAR_WIDTH, CAR_HEIGHT, TILE_SIZE
 )
@@ -46,6 +46,8 @@ class Car:
         self.steering_angle: float = 0.0
         self.sprite = self.build_sprite(color)
         self.acceleration: float = 0.0
+        self.boost_amount: float = 0.0   # bonus d'accélération par frame pendant le boost
+        self.boost_timer: int = 0        # frames restantes de boost (0 = pas de boost)
         self.is_drifting: bool = False
 
     @property
@@ -67,6 +69,19 @@ class Car:
         """
         self.acceleration = 0.0
 
+    def apply_boost(self, boost_amount: float) -> None:
+        """Active un bonus d'accélération pendant CAR_BOOST_DURATION frames.
+
+    Appelée à chaque frame par un BoostBlock tant que la voiture est dessus :
+    le timer est simplement rechargé, les boosts ne s'additionnent pas.
+
+    Args:
+        boost_amount: Bonus ajouté à la vitesse avant par frame.
+        """
+        self.boost_amount = boost_amount
+        self.boost_timer = CAR_BOOST_DURATION
+
+
     def turn_left(self) -> None:
         """Augmente l'angle de braquage (virage à gauche)."""
         self.steering_angle = min(
@@ -86,6 +101,7 @@ class Car:
         self.steering_angle = 0.0
         self.acceleration = 0.0
         self.is_drifting = False
+        self.boost_timer = 0
 
     def _axes(self) -> tuple[float, float, float, float]:
         """Renvoie les axes de la voiture dans le repère de l'écran.
@@ -124,6 +140,9 @@ class Car:
 
         # 3. Accélération, réduite par la traction du terrain
         v_forward += self.acceleration * terrain.traction
+        if self.boost_timer > 0:
+            v_forward += self.boost_amount
+            self.boost_timer -= 1
         v_forward = max(v_forward, -CAR_MAX_REVERSE_SPEED)
 
         # 4. Adhérence : si la vitesse latérale dépasse le seuil du terrain, la voiture
